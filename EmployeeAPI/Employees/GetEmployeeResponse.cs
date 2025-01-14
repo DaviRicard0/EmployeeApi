@@ -1,10 +1,12 @@
-using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace EmployeeAPI.Employees;
 
 public class CreateEmployeeRequest
 {
+    [Required]
     public required string FirstName { get; set; }
+    [Required]
     public required string LastName { get; set; }
     public string? SocialSecurityNumber { get; set; }
 
