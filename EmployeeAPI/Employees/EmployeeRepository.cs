@@ -1,6 +1,6 @@
 using EmployeeAPI.Abstractions;
 
-namespace EmployeeAPI;
+namespace EmployeeAPI.Employees;
 
 public class EmployeeRepository : IRepository<Employee>
 {
