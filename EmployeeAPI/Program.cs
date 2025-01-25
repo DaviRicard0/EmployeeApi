@@ -2,12 +2,13 @@ using System.ComponentModel.DataAnnotations;
 using EmployeeAPI;
 using EmployeeAPI.Abstractions;
 using EmployeeAPI.Employees;
+using FluentValidation;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<IRepository<Employee>, EmployeeRepository>();
-
 builder.Services.AddProblemDetails();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -57,12 +58,17 @@ employeeRoute.MapGet("{id:int}", (int id, IRepository<Employee> repository) => {
     });
 });
 
-employeeRoute.MapPost(string.Empty, (CreateEmployeeRequest employeeRequest, IRepository<Employee> repository) => {
-    var validationProblems = new List<ValidationResult>();
-    var isValid = Validator.TryValidateObject(employeeRequest, new ValidationContext(employeeRequest), validationProblems, true);
-    if (!isValid)
+employeeRoute.MapPost(
+    string.Empty, 
+    async (
+        CreateEmployeeRequest employeeRequest, 
+        IRepository<Employee> repository,
+        IValidator<CreateEmployeeRequest> validator
+    ) => {
+    var validationResults = await validator.ValidateAsync(employeeRequest);
+    if (!validationResults.IsValid)
     {
-        return Results.BadRequest(validationProblems.ToValidationProblemDetails());
+        return Results.ValidationProblem(validationResults.ToDictionary());
     }
     
     var newEmployee = new Employee {
