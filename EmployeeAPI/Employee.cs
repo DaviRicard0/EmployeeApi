@@ -1,5 +1,3 @@
-using System;
-
 namespace EmployeeAPI;
 
 public class Employee
@@ -16,4 +14,21 @@ public class Employee
     public string? ZipCode { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Email { get; set; }
+
+    public List<EmployeeBenefits> Benefits { get; set; } = [];
+}
+
+public class EmployeeBenefits
+{
+    public int Id {get;set;}
+    public int EmployeeId { get; set; }
+    public BenefitType BenefitType { get; set; }
+    public decimal Cost { get; set; }
+}
+
+public enum BenefitType 
+{
+    Health,
+    Dental,
+    Vision
 }
