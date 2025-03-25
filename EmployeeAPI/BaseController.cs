@@ -6,6 +6,7 @@ namespace EmployeeAPI;
 
 [ApiController]
 [Route("[controller]")]
+[Produces("application/json")]
 public abstract class BaseController : Controller
 {
     protected async Task<ValidationResult> ValidateAsync<T>(T instance)

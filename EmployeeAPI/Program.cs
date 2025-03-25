@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using EmployeeAPI;
 using EmployeeAPI.Abstractions;
 using EmployeeAPI.Employees;
@@ -13,6 +12,10 @@ builder.Services.AddControllers(options => {
     options.Filters.Add<FluentValidationFilter>();
 });
 builder.Services.AddHttpContextAccessor();
+/*builder.Services.AddSwaggerGen(options =>
+{
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "TheEmployeeAPI.xml"));
+});*/
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
