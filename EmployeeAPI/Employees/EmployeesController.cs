@@ -7,10 +7,15 @@ namespace EmployeeAPI.Employees;
 public class EmployeesController : BaseController
 {
     private readonly IRepository<Employee> _repository;
+    private readonly ILogger<EmployeesController> _logger;
 
-    public EmployeesController(IRepository<Employee> repository)
+    public EmployeesController(
+        IRepository<Employee> repository,
+        ILogger<EmployeesController> logger
+    )
     {
         _repository = repository;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -52,14 +57,8 @@ public class EmployeesController : BaseController
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeRequest employeeRequest)
+    public IActionResult CreateEmployee([FromBody] CreateEmployeeRequest employeeRequest)
     {
-        var validationResults = await ValidateAsync(employeeRequest);
-        if (!validationResults.IsValid)
-        {
-            return BadRequest(validationResults.ToModelStateDictionary());
-        }
-
         var newEmployee = new Employee
         {
             FirstName = employeeRequest.FirstName!,
@@ -79,8 +78,9 @@ public class EmployeesController : BaseController
     }
 
     [HttpPut("{id:int}")]
-    public IActionResult Update([FromRoute] int id, [FromBody] UpdateEmployeeRequest employeeRequest)
+    public IActionResult UpdateEmployee([FromRoute] int id, [FromBody] UpdateEmployeeRequest employeeRequest)
     {
+        _logger.LogInformation("Updating employee with ID: {EmployeeId}",id);
         var existingEmployee = _repository.GetById(id);
         if (existingEmployee == null)
         {

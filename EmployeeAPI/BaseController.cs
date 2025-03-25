@@ -12,7 +12,8 @@ public abstract class BaseController : Controller
     {
         var validator = HttpContext.RequestServices.GetService<IValidator<T>>() 
             ?? throw new ArgumentException($"No validator found for {typeof(T).Name}");
-        var result = await validator.ValidateAsync(instance);
+        var validationContext = new ValidationContext<T>(instance);
+        var result = await validator.ValidateAsync(validationContext);
         return result;
     }
 }

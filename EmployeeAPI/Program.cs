@@ -9,7 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<IRepository<Employee>, EmployeeRepository>();
 builder.Services.AddProblemDetails();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => {
+    options.Filters.Add<FluentValidationFilter>();
+});
+builder.Services.AddHttpContextAccessor();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
