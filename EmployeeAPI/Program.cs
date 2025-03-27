@@ -2,6 +2,7 @@ using EmployeeAPI;
 using EmployeeAPI.Abstractions;
 using EmployeeAPI.Employees;
 using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,8 @@ builder.Services.AddHttpContextAccessor();
 {
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "TheEmployeeAPI.xml"));
 });*/
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite("Data Source=employees.db"));
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
