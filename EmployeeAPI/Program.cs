@@ -1,12 +1,10 @@
 using EmployeeAPI;
-using EmployeeAPI.Abstractions;
 using EmployeeAPI.Employees;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<IRepository<Employee>, EmployeeRepository>();
 builder.Services.AddProblemDetails();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddControllers(options => {
@@ -25,6 +23,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope()) {
+    var services = scope.ServiceProvider;
+    SeedData.Seed(services);
+}
 
 // Configure the HTTP request pipeline.
 /*if (app.Environment.IsDevelopment())

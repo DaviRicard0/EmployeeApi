@@ -10,7 +10,7 @@ public class EmployeesController : BaseController
     private readonly ILogger<EmployeesController> _logger;
 
     public EmployeesController(
-        IRepository<Employee> repository,
+        AppDbContext repository,
         ILogger<EmployeesController> logger
     )
     {
