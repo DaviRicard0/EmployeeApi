@@ -1,20 +1,20 @@
-using EmployeeAPI.Abstractions;
-using FluentValidation;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace EmployeeAPI.Employees;
 
 public class EmployeesController : BaseController
 {
-    private readonly IRepository<Employee> _repository;
+    private readonly AppDbContext _context;
     private readonly ILogger<EmployeesController> _logger;
 
     public EmployeesController(
-        AppDbContext repository,
+        AppDbContext context,
         ILogger<EmployeesController> logger
     )
     {
-        _repository = repository;
+        _context = context;
         _logger = logger;
     }
 
@@ -25,9 +25,13 @@ public class EmployeesController : BaseController
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<GetEmployeeResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public IActionResult GetAllEmployees()
+    public async Task<IActionResult> GetAllEmployees()
     {
-        return Ok(_repository.GetAll().Select(EmployeeToGetEmployeeResponse));
+        var employees = await _context.Employees
+            .Include(e => e.Benefits)
+            .ToArrayAsync();
+
+        return Ok(employees.Select(EmployeeToGetEmployeeResponse));
     }
 
     /// <summary>
@@ -39,13 +43,11 @@ public class EmployeesController : BaseController
     [ProducesResponseType(typeof(GetEmployeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public IActionResult GetEmployeeById([FromRoute] int id)
+    public async Task<IActionResult> GetEmployeeById([FromRoute] int id)
     {
-        var employee = _repository.GetById(id);
-        if (employee == null)
-        {
-            return NotFound();
-        }
+        var employee = await _context.Employees.SingleOrDefaultAsync(e => e.Id.Equals(id));
+
+        if (employee is null) return NotFound();
 
         return Ok(EmployeeToGetEmployeeResponse(employee));
     }
