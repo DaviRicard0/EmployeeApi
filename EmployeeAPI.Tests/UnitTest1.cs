@@ -8,24 +8,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace EmployeeAPI.Tests;
 
-public class BasicTests : IClassFixture<WebApplicationFactory<Program>>
+public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly CustomWebApplicationFactory _factory;
     private int _employeeIdForAddressTest;
 
-    public BasicTests(WebApplicationFactory<Program> factory)
+    public BasicTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
-
-        var repo = _factory.Services.GetRequiredService<IRepository<Employee>>();
-        var employee = new Employee {FirstName="John",LastName="Doe",Address1="sdf",
-        Benefits =
-        [
-            new EmployeeBenefits { BenefitType = BenefitType.Health, Cost = 100 },
-            new EmployeeBenefits { BenefitType = BenefitType.Dental, Cost = 50 }
-        ]};
-        repo.Create(employee);
-        _employeeIdForAddressTest = repo.GetAll().First().Id;
     }
 
     [Fact]

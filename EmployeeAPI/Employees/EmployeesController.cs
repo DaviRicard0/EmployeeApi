@@ -25,11 +25,30 @@ public class EmployeesController : BaseController
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<GetEmployeeResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetAllEmployees()
+    public async Task<IActionResult> GetAllEmployees([FromQuery]GetAllEmployeesRequest request)
     {
-        var employees = await _context.Employees
+        int page = request?.Page ?? 1;
+        int numberOfRecords = request?.RecordsPerPage ?? 100;
+
+        IQueryable<Employee> query = _context.Employees
             .Include(e => e.Benefits)
-            .ToArrayAsync();
+            .Skip((page - 1) * numberOfRecords)
+            .Take(numberOfRecords);
+
+        if (request != null)
+        {
+            if (!string.IsNullOrWhiteSpace(request.FirstNameContains))
+            {
+                query = query.Where(e => e.FirstName.Contains(request.FirstNameContains));
+            }
+            
+            if (!string.IsNullOrWhiteSpace(request.LastNameContains))
+            {
+                query = query.Where(e => e.LastName.Contains(request.LastNameContains));
+            }
+        }
+
+        var employees = await query.ToArrayAsync();
 
         return Ok(employees.Select(EmployeeToGetEmployeeResponse));
     }
