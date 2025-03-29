@@ -1,9 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
-using EmployeeAPI.Abstractions;
 using EmployeeAPI.Employees;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace EmployeeAPI.Tests;
@@ -11,7 +9,7 @@ namespace EmployeeAPI.Tests;
 public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;
-    private int _employeeIdForAddressTest;
+    private int _employeeIdForAddressTest = 1;
 
     public BasicTests(CustomWebApplicationFactory factory)
     {
@@ -27,6 +25,18 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
+    public async Task GetAllEmployees_WithFilter_ReturnsOneResult()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/employees?FirstNameContains=Jane");
+
+        response.EnsureSuccessStatusCode();
+
+        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>();
+        Assert.Single(employees);
+    }
+
+    [Fact]
     public async Task GetEmployeeById_ReturnsOkResult()
     {
         var client = _factory.CreateClient();
@@ -39,7 +49,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task CreateEmployee_ReturnsCreatedResult()
     {
         var client = _factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/employees", new Employee { FirstName = "John", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
+        var response = await client.PostAsJsonAsync("/employees", new Employee { FirstName = "Tom", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
 
         response.EnsureSuccessStatusCode();
     }
@@ -69,9 +79,18 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task UpdateEmployee_ReturnsOkResult()
     {
         var client = _factory.CreateClient();
-        var response = await client.PutAsJsonAsync($"/employees/{_employeeIdForAddressTest}", new Employee { FirstName = "John", LastName = "Doe", SocialSecurityNumber = "1111-11-1111", Address1 = "sdf" });
+        var response = await client.PutAsJsonAsync("/employees/1", new Employee { 
+            FirstName = "John", 
+            LastName = "Doe", 
+            Address1 = "123 Main Smoot" 
+        });
 
         response.EnsureSuccessStatusCode();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var employee = await db.Employees.FindAsync(1);
+        Assert.Equal("123 Main Smoot", employee.Address1);
     }
 
     [Fact]
@@ -113,6 +132,33 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         
         var benefits = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponseEmployeeBenefit>>();
         Assert.Equal(2, benefits.Count());
+    }
+
+    [Fact]
+    public async Task DeleteEmployee_ReturnsNoContentResult()
+    {
+        var client = _factory.CreateClient();
+
+        var newEmployee = new Employee { FirstName = "Meow", LastName = "Garita" };
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Employees.Add(newEmployee);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.DeleteAsync($"/employees/{newEmployee.Id}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteEmployee_ReturnsNotFoundResult()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.DeleteAsync("/employees/99999");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
 }

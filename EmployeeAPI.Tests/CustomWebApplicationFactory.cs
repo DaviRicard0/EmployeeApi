@@ -38,6 +38,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             {
                 var connection = container.GetRequiredService<DbConnection>();
                 options.UseSqlite(connection);
+                options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
             });
 
         });

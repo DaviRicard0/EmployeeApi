@@ -15,8 +15,10 @@ builder.Services.AddHttpContextAccessor();
 {
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "TheEmployeeAPI.xml"));
 });*/
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=employees.db"));
+builder.Services.AddDbContext<AppDbContext>(options => {
+    options.UseSqlite("Data Source=employees.db");
+    options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+});
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -26,7 +28,7 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope()) {
     var services = scope.ServiceProvider;
-    SeedData.Seed(services);
+    SeedData.MigrateAndSeed(services);
 }
 
 // Configure the HTTP request pipeline.
