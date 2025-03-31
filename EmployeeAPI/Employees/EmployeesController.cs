@@ -31,7 +31,6 @@ public class EmployeesController : BaseController
         int numberOfRecords = request?.RecordsPerPage ?? 100;
 
         IQueryable<Employee> query = _context.Employees
-            .Include(e => e.Benefits)
             .Skip((page - 1) * numberOfRecords)
             .Take(numberOfRecords);
 
@@ -154,12 +153,25 @@ public class EmployeesController : BaseController
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetBenefitsForEmployee(int employeeId)
     {
-        var employee = await _context.Employees.Include(e => e.Benefits).SingleOrDefaultAsync(e => e.Id.Equals(employeeId));
+        var employee = await _context.Employees
+            .Include(e => e.Benefits)
+            .ThenInclude(e => e.Benefit)
+            .SingleOrDefaultAsync(e => e.Id == employeeId);
+
         if (employee == null)
         {
             return NotFound();
         }
-        return Ok(employee.Benefits.Select(BenefitToBenefitResponse));
+
+        var benefits = employee.Benefits.Select(b => new GetEmployeeResponseEmployeeBenefit
+        {
+            Id = b.Id,
+            Name = b.Benefit.Name,
+            Description = b.Benefit.Description,
+            Cost = b.CostToEmployee ?? b.Benefit.BaseCost   //we want to use the cost to employee if it exists, otherwise we want to use the base cost
+        });
+
+        return Ok(benefits);
     }
 
     [HttpDelete("{id}")]
@@ -181,17 +193,6 @@ public class EmployeesController : BaseController
         return NoContent();
     }
 
-    private static GetEmployeeResponseEmployeeBenefit BenefitToBenefitResponse(EmployeeBenefits benefit)
-    {
-        return new GetEmployeeResponseEmployeeBenefit
-        {
-            Id = benefit.Id,
-            EmployeeId = benefit.EmployeeId,
-            BenefitType = benefit.BenefitType,
-            Cost = benefit.Cost
-        };
-    }
-
     private GetEmployeeResponse EmployeeToGetEmployeeResponse(Employee employee)
     {
         return new GetEmployeeResponse
@@ -205,13 +206,7 @@ public class EmployeesController : BaseController
             ZipCode = employee.ZipCode,
             PhoneNumber = employee.PhoneNumber,
             Email = employee.Email,
-            Benefits = [.. employee.Benefits.Select(benefit => new GetEmployeeResponseEmployeeBenefit
-            {
-                Id = benefit.Id,
-                EmployeeId = benefit.EmployeeId,
-                BenefitType = benefit.BenefitType,
-                Cost = benefit.Cost
-            })]
+            Benefits = []
         };
     }
 }
