@@ -35,7 +35,7 @@ namespace EmployeeAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Benefits");
+                    b.ToTable("Benefits", (string)null);
                 });
 
             modelBuilder.Entity("EmployeeAPI.Employee", b =>
@@ -78,7 +78,7 @@ namespace EmployeeAPI.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Employees");
+                    b.ToTable("Employees", (string)null);
                 });
 
             modelBuilder.Entity("EmployeeAPI.EmployeeBenefit", b =>
@@ -103,7 +103,7 @@ namespace EmployeeAPI.Migrations
                     b.HasIndex("EmployeeId", "BenefitId")
                         .IsUnique();
 
-                    b.ToTable("EmployeeBenefits");
+                    b.ToTable("EmployeeBenefits", (string)null);
                 });
 
             modelBuilder.Entity("EmployeeAPI.EmployeeBenefit", b =>

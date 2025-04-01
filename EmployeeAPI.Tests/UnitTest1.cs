@@ -18,19 +18,30 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 
     [Fact]
     public async Task GetAllEmployees_ReturnsOkResult(){
-        HttpClient client = _factory.CreateClient();
+         var client = _factory.CreateClient();
         var response = await client.GetAsync("/employees");
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to get employees: {content}");
+        }
+
+        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>();
+        Assert.NotEmpty(employees);
     }
 
     [Fact]
     public async Task GetAllEmployees_WithFilter_ReturnsOneResult()
     {
-        var client = _factory.CreateClient();
-        var response = await client.GetAsync("/employees?FirstNameContains=Jane");
+       var client = _factory.CreateClient();
+        var response = await client.GetAsync("/employees?FirstNameContains=John");
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Failed to get employees: {content}");
+        }
 
         var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>();
         Assert.Single(employees);
@@ -85,7 +96,11 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
             Address1 = "123 Main Smoot" 
         });
 
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            Assert.Fail($"Failed to update employee: {content}");
+        }
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
