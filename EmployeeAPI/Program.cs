@@ -2,6 +2,7 @@ using EmployeeAPI;
 using EmployeeAPI.Employees;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Internal;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,7 @@ builder.Services.AddHttpContextAccessor();
 {
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "TheEmployeeAPI.xml"));
 });*/
+builder.Services.AddSingleton<ISystemClock, SystemClock>();
 builder.Services.AddDbContext<AppDbContext>(options => {
     options.UseSqlite("Data Source=employees.db");
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
