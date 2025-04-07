@@ -86,7 +86,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         Assert.NotNull(problemDetails);
         Assert.Contains("FirstName", problemDetails.Errors.Keys);
         Assert.Contains("LastName", problemDetails.Errors.Keys);
-        Assert.Contains("'First name' is required.", problemDetails.Errors["FirstName"]);
+        Assert.Contains("'First name' must not be empty.", problemDetails.Errors["FirstName"]);
         Assert.Contains("'Last Name' must not be empty.", problemDetails.Errors["LastName"]);
     }
 

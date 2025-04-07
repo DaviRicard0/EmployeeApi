@@ -32,7 +32,7 @@ builder.Services.AddDbContext<AppDbContext>(options => {
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 });
 
-builder.Services
+/*builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(
         options =>
@@ -46,7 +46,7 @@ builder.Services
             };
 
             options.TokenValidationParameters = tokenValidationParameters;
-        });
+        });*/
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
