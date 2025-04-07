@@ -16,33 +16,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
         builder.ConfigureServices(services => 
         {
-            var dbContextDescriptor = services.SingleOrDefault(
-                d => d.ServiceType ==
-                    typeof(DbContextOptions<AppDbContext>));
-
-            services.Remove(dbContextDescriptor);
-
-            var dbConnectionDescriptor = services.SingleOrDefault(
-                d => d.ServiceType ==
-                    typeof(DbConnection));
-
-            services.Remove(dbConnectionDescriptor);
-
-            // Create open SqliteConnection so EF won't automatically close it.
-            services.AddSingleton<DbConnection>(container =>
-            {
-                var connection = new SqliteConnection("DataSource=:memory:");
-                connection.Open();
-
-                return connection;
-            });
-
-            services.AddDbContext<AppDbContext>((container, options) =>
-            {
-                var connection = container.GetRequiredService<DbConnection>();
-                options.UseSqlite(connection);
-            });
-
             var systemClockDescriptor = services.Single(d => d.ServiceType == typeof(ISystemClock));
             services.Remove(systemClockDescriptor);
             services.AddSingleton<ISystemClock>(SystemClock);

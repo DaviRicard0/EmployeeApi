@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +23,7 @@ public class EmployeesController : BaseController
     /// <returns>An array of all employees.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<GetEmployeeResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAllEmployees([FromQuery]GetAllEmployeesRequest request)
     {
@@ -109,17 +109,18 @@ public class EmployeesController : BaseController
     [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(GetEmployeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ValidationProblemDetails))]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> UpdateEmployee([FromRoute] int id, [FromBody] UpdateEmployeeRequest employeeRequest)
     {
         _logger.LogInformation("Updating employee with ID: {EmployeeId}",id);
-        var existingEmployee = await _context.Employees.AsTracking().SingleOrDefaultAsync(e => e.Id.Equals(id));
+
+        var existingEmployee = await _context.Employees.FindAsync(id);
         if (existingEmployee == null)
         {
             return NotFound();
         }
 
+        _logger.LogDebug("Updating employee details for ID: {EmployeeId}", id);
         existingEmployee.Address1 = employeeRequest.Address1;
         existingEmployee.Address2 = employeeRequest.Address2;
         existingEmployee.City = employeeRequest.City;
@@ -130,8 +131,9 @@ public class EmployeesController : BaseController
 
         try
         {
-            await _context.SaveChangesAsync();
+            _context.Entry(existingEmployee).State = EntityState.Modified;
 
+            await _context.SaveChangesAsync();
             _logger.LogInformation("Employee with ID: {EmployeeId} successfully updated", id);
             return Ok(existingEmployee);
         }
@@ -168,7 +170,7 @@ public class EmployeesController : BaseController
             Id = b.Id,
             Name = b.Benefit.Name,
             Description = b.Benefit.Description,
-            Cost = b.CostToEmployee ?? b.Benefit.BaseCost   //we want to use the cost to employee if it exists, otherwise we want to use the base cost
+            Cost = b.CostToEmployee ?? b.Benefit.BaseCost
         });
 
         return Ok(benefits);
@@ -205,8 +207,7 @@ public class EmployeesController : BaseController
             State = employee.State,
             ZipCode = employee.ZipCode,
             PhoneNumber = employee.PhoneNumber,
-            Email = employee.Email,
-            Benefits = []
+            Email = employee.Email
         };
     }
 }

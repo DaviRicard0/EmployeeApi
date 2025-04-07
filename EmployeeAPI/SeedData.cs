@@ -63,18 +63,18 @@ public class SeedData
             var visionBenefit = context.Benefits.Single(b => b.Name == "Vision");
 
             var john = context.Employees.Single(e => e.FirstName == "John");
-            john.Benefits = new List<EmployeeBenefit>
+            context.AddRange(new List<EmployeeBenefit>
             {
-                new EmployeeBenefit { Benefit = healthBenefit, CostToEmployee = 100m},
-                new EmployeeBenefit { Benefit = dentalBenefit }
-            };
+                new EmployeeBenefit { EmployeeId = john.Id, BenefitId = healthBenefit.Id, CostToEmployee = 100m},
+                new EmployeeBenefit { EmployeeId = john.Id, BenefitId = dentalBenefit.Id }
+            });
 
             var jane = context.Employees.Single(e => e.FirstName == "Jane");
-            jane.Benefits = new List<EmployeeBenefit>
+            context.AddRange(new List<EmployeeBenefit>
             {
-                new EmployeeBenefit { Benefit = healthBenefit, CostToEmployee = 120m},
-                new EmployeeBenefit { Benefit = visionBenefit }
-            };
+                new EmployeeBenefit { EmployeeId = jane.Id, BenefitId = healthBenefit.Id, CostToEmployee = 120m},
+                new EmployeeBenefit { EmployeeId = jane.Id, BenefitId = visionBenefit.Id }
+            });
 
             context.SaveChanges();
         }

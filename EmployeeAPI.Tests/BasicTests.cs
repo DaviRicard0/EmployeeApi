@@ -9,7 +9,7 @@ namespace EmployeeAPI.Tests;
 public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;
-    private int _employeeIdForAddressTest = 1;
+    private int _employeeId = 1;
 
     public BasicTests(CustomWebApplicationFactory factory)
     {
@@ -34,7 +34,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetAllEmployees_WithFilter_ReturnsOneResult()
     {
-       var client = _factory.CreateClient();
+        var client = _factory.CreateClient();
         var response = await client.GetAsync("/employees?FirstNameContains=John");
 
         if (!response.IsSuccessStatusCode)
@@ -42,6 +42,10 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
             var content = await response.Content.ReadAsStringAsync();
             Assert.Fail($"Failed to get employees: {content}");
         }
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var allEmployees = db.Employees.ToList();
 
         var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>();
         Assert.Single(employees);
@@ -82,7 +86,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         Assert.NotNull(problemDetails);
         Assert.Contains("FirstName", problemDetails.Errors.Keys);
         Assert.Contains("LastName", problemDetails.Errors.Keys);
-        Assert.Contains("First name is required.", problemDetails.Errors["FirstName"]);
+        Assert.Contains("'First name' is required.", problemDetails.Errors["FirstName"]);
         Assert.Contains("'Last Name' must not be empty.", problemDetails.Errors["LastName"]);
     }
 
@@ -107,6 +111,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         var employee = await db.Employees.FindAsync(1);
         Assert.Equal("123 Main Smoot", employee.Address1);
         Assert.Equal(CustomWebApplicationFactory.SystemClock.UtcNow.UtcDateTime, employee.LastModifiedOn);
+        Assert.Equal("test@test.com", employee.LastModifiedBy);
     }
 
     [Fact]
@@ -126,7 +131,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         var invalidEmployee = new UpdateEmployeeRequest(); // Empty object to trigger validation errors
 
         // Act
-        var response = await client.PutAsJsonAsync($"/employees/{_employeeIdForAddressTest}", invalidEmployee);
+        var response = await client.PutAsJsonAsync($"/employees/{_employeeId}", invalidEmployee);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -141,7 +146,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         // Act
         var client = _factory.CreateClient();
-        var response = await client.GetAsync($"/employees/{_employeeIdForAddressTest}/benefits");
+        var response = await client.GetAsync($"/employees/{_employeeId}/benefits");
 
         // Assert
         response.EnsureSuccessStatusCode();
