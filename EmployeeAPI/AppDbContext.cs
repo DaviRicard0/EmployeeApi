@@ -6,16 +6,16 @@ namespace EmployeeAPI;
 public class AppDbContext : DbContext
 {
     private readonly ISystemClock _systemClock;
-    // private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AppDbContext(
         DbContextOptions<AppDbContext> options, 
-        ISystemClock systemClock // , 
-        // IHttpContextAccessor httpContextAccessor
+        ISystemClock systemClock,
+        IHttpContextAccessor httpContextAccessor
     ) : base(options)
     {
         _systemClock = systemClock;
-        // _httpContextAccessor = httpContextAccessor;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public DbSet<Employee> Employees { get; set; }
@@ -49,13 +49,13 @@ public class AppDbContext : DbContext
         {
             if (entry.State == EntityState.Added)
             {
-                entry.Entity.CreatedBy = "";//_httpContextAccessor?.HttpContext?.User?.Identity?.Name;
+                entry.Entity.CreatedBy = _httpContextAccessor?.HttpContext?.User?.Identity?.Name;
                 entry.Entity.CreatedOn = _systemClock.UtcNow.UtcDateTime;
             }
 
             if (entry.State == EntityState.Modified)
             {
-                entry.Entity.LastModifiedBy = "";//_httpContextAccessor?.HttpContext?.User?.Identity?.Name;
+                entry.Entity.LastModifiedBy = _httpContextAccessor?.HttpContext?.User?.Identity?.Name;
                 entry.Entity.LastModifiedOn = _systemClock.UtcNow.UtcDateTime;
             }
         }

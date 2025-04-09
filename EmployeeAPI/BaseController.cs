@@ -9,12 +9,12 @@ namespace EmployeeAPI;
 [Produces("application/json")]
 public abstract class BaseController : Controller
 {
-    protected async Task<ValidationResult> ValidateAsync<T>(T instance)
+    /*protected async Task<ValidationResult> ValidateAsync<T>(T instance)
     {
         var validator = HttpContext.RequestServices.GetService<IValidator<T>>() 
             ?? throw new ArgumentException($"No validator found for {typeof(T).Name}");
         var validationContext = new ValidationContext<T>(instance);
         var result = await validator.ValidateAsync(validationContext);
         return result;
-    }
+    }*/
 }

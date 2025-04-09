@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace EmployeeAPI.Employees;
 
+[Authorize]
 public class EmployeesController : BaseController
 {
     private readonly AppDbContext _context;

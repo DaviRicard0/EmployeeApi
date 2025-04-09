@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using EmployeeAPI.Employees;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +19,8 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 
     [Fact]
     public async Task GetAllEmployees_ReturnsOkResult(){
-         var client = _factory.CreateClient();
+        var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var response = await client.GetAsync("/employees");
 
         if (!response.IsSuccessStatusCode)
@@ -35,6 +37,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetAllEmployees_WithFilter_ReturnsOneResult()
     {
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var response = await client.GetAsync("/employees?FirstNameContains=John");
 
         if (!response.IsSuccessStatusCode)
@@ -55,6 +58,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetEmployeeById_ReturnsOkResult()
     {
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var response = await client.GetAsync("/employees/1");
 
         response.EnsureSuccessStatusCode();
@@ -64,6 +68,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task CreateEmployee_ReturnsCreatedResult()
     {
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var response = await client.PostAsJsonAsync("/employees", new Employee { FirstName = "Tom", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
 
         response.EnsureSuccessStatusCode();
@@ -74,6 +79,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         // Arrange
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var invalidEmployee = new CreateEmployeeRequest(); // Empty object to trigger validation errors
 
         // Act
@@ -86,7 +92,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         Assert.NotNull(problemDetails);
         Assert.Contains("FirstName", problemDetails.Errors.Keys);
         Assert.Contains("LastName", problemDetails.Errors.Keys);
-        Assert.Contains("'First name' must not be empty.", problemDetails.Errors["FirstName"]);
+        Assert.Contains("'First Name' must not be empty.", problemDetails.Errors["FirstName"]);
         Assert.Contains("'Last Name' must not be empty.", problemDetails.Errors["LastName"]);
     }
 
@@ -94,6 +100,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task UpdateEmployee_ReturnsOkResult()
     {
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var response = await client.PutAsJsonAsync("/employees/1", new Employee { 
             FirstName = "John", 
             LastName = "Doe", 
@@ -118,6 +125,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task UpdateEmployee_ReturnsNotFoundForNonExistentEmployee()
     {
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var response = await client.PutAsJsonAsync("/employees/0", new Employee { FirstName = "John", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -128,6 +136,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         // Arrange
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var invalidEmployee = new UpdateEmployeeRequest(); // Empty object to trigger validation errors
 
         // Act
@@ -146,6 +155,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         // Act
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var response = await client.GetAsync($"/employees/{_employeeId}/benefits");
 
         // Assert
@@ -159,6 +169,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task DeleteEmployee_ReturnsNoContentResult()
     {
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
 
         var newEmployee = new Employee { FirstName = "Meow", LastName = "Garita" };
         using (var scope = _factory.Services.CreateScope())
@@ -177,9 +188,19 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task DeleteEmployee_ReturnsNotFoundResult()
     {
         var client = _factory.CreateClient();
+        await AddAuthorizationToClientForRoleAsync(client, "Admin");
         var response = await client.DeleteAsync("/employees/99999");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    protected async Task AddAuthorizationToClientForRoleAsync(HttpClient client, string role)
+    {
+        var resp = await client.PostAsJsonAsync("/api/auth/generateAVeryInsecureToken_pleasedontusethisever", new
+        {
+            role, username = "test@test.com"
+        });
+        resp.EnsureSuccessStatusCode();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await resp.Content.ReadAsStringAsync());
+    }
 }
