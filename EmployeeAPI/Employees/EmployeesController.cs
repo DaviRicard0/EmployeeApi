@@ -10,147 +10,158 @@ public class EmployeesController : BaseController
     private readonly AppDbContext _context;
     private readonly ILogger<EmployeesController> _logger;
 
-    public EmployeesController(
-        AppDbContext context,
-        ILogger<EmployeesController> logger
-    )
+    public EmployeesController(AppDbContext context, ILogger<EmployeesController> logger)
     {
         _context = context;
         _logger = logger;
     }
 
+    #region GET: All Employees
     /// <summary>
     /// Get all employees.
     /// </summary>
-    /// <returns>An array of all employees.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<GetEmployeeResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetAllEmployees([FromQuery]GetAllEmployeesRequest request)
+    public async Task<IActionResult> GetAllEmployees([FromQuery] GetAllEmployeesRequest request)
     {
         int page = request?.Page ?? 1;
-        int numberOfRecords = request?.RecordsPerPage ?? 100;
+        int pageSize = request?.RecordsPerPage ?? 100;
 
-        IQueryable<Employee> query = _context.Employees
-            .Skip((page - 1) * numberOfRecords)
-            .Take(numberOfRecords);
+        var query = _context.Employees.AsQueryable();
 
-        if (request != null)
-        {
-            if (!string.IsNullOrWhiteSpace(request.FirstNameContains))
-            {
-                query = query.Where(e => e.FirstName.Contains(request.FirstNameContains));
-            }
-            
-            if (!string.IsNullOrWhiteSpace(request.LastNameContains))
-            {
-                query = query.Where(e => e.LastName.Contains(request.LastNameContains));
-            }
-        }
+        if (!string.IsNullOrWhiteSpace(request?.FirstNameContains))
+            query = query.Where(e => e.FirstName.Contains(request.FirstNameContains));
 
-        var employees = await query.ToArrayAsync();
+        if (!string.IsNullOrWhiteSpace(request?.LastNameContains))
+            query = query.Where(e => e.LastName.Contains(request.LastNameContains));
+
+        var employees = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToArrayAsync();
 
         return Ok(employees.Select(EmployeeToGetEmployeeResponse));
     }
+    #endregion
 
+    #region GET: Employee By ID
     /// <summary>
     /// Gets an employee by ID.
     /// </summary>
-    /// <param name="id">The ID of the employee.</param>
-    /// <returns>The single employee record.</returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(GetEmployeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> GetEmployeeById([FromRoute] int id)
+    public async Task<IActionResult> GetEmployeeById(int id)
     {
-        var employee = await _context.Employees.SingleOrDefaultAsync(e => e.Id.Equals(id));
+        var employee = await _context.Employees.FindAsync(id);
 
-        if (employee is null) return NotFound();
-
-        return Ok(EmployeeToGetEmployeeResponse(employee));
+        return employee == null
+            ? NotFound()
+            : Ok(EmployeeToGetEmployeeResponse(employee));
     }
+    #endregion
 
+    #region POST: Create Employee
     /// <summary>
     /// Creates a new employee.
     /// </summary>
-    /// <param name="employeeRequest">The employee to be created.</param>
-    /// <returns>A link to the employee that was created.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(GetEmployeeResponse), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ValidationProblemDetails))]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeRequest employeeRequest)
+    public async Task<IActionResult> CreateEmployee([FromBody] CreateEmployeeRequest request)
     {
         var newEmployee = new Employee
         {
-            FirstName = employeeRequest.FirstName!,
-            LastName = employeeRequest.LastName!,
-            SocialSecurityNumber = employeeRequest.SocialSecurityNumber,
-            Address1 = employeeRequest.Address1,
-            Address2 = employeeRequest.Address2,
-            City = employeeRequest.City,
-            State = employeeRequest.State,
-            ZipCode = employeeRequest.ZipCode,
-            PhoneNumber = employeeRequest.PhoneNumber,
-            Email = employeeRequest.Email
+            FirstName = request.FirstName!,
+            LastName = request.LastName!,
+            SocialSecurityNumber = request.SocialSecurityNumber,
+            Address1 = request.Address1,
+            Address2 = request.Address2,
+            City = request.City,
+            State = request.State,
+            ZipCode = request.ZipCode,
+            PhoneNumber = request.PhoneNumber,
+            Email = request.Email
         };
 
         await _context.Employees.AddAsync(newEmployee);
         await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetEmployeeById), new { id = newEmployee.Id }, newEmployee);
-    }
 
+        return CreatedAtAction(nameof(GetEmployeeById), new { id = newEmployee.Id }, EmployeeToGetEmployeeResponse(newEmployee));
+    }
+    #endregion
+
+    #region PUT: Update Employee
     /// <summary>
     /// Updates an employee.
     /// </summary>
-    /// <param name="id">The ID of the employee to update.</param>
-    /// <param name="employeeRequest">The employee data to update.</param>
-    /// <returns></returns>
     [HttpPut("{id:int}")]
     [ProducesResponseType(typeof(GetEmployeeResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> UpdateEmployee([FromRoute] int id, [FromBody] UpdateEmployeeRequest employeeRequest)
+    public async Task<IActionResult> UpdateEmployee(int id, [FromBody] UpdateEmployeeRequest request)
     {
-        _logger.LogInformation("Updating employee with ID: {EmployeeId}",id);
+        _logger.LogInformation("Updating employee with ID: {EmployeeId}", id);
 
-        var existingEmployee = await _context.Employees.FindAsync(id);
-        if (existingEmployee == null)
+        var employee = await _context.Employees.FindAsync(id);
+        if (employee == null)
         {
             return NotFound();
         }
 
         _logger.LogDebug("Updating employee details for ID: {EmployeeId}", id);
-        existingEmployee.Address1 = employeeRequest.Address1;
-        existingEmployee.Address2 = employeeRequest.Address2;
-        existingEmployee.City = employeeRequest.City;
-        existingEmployee.State = employeeRequest.State;
-        existingEmployee.ZipCode = employeeRequest.ZipCode;
-        existingEmployee.PhoneNumber = employeeRequest.PhoneNumber;
-        existingEmployee.Email = employeeRequest.Email;
+
+        employee.Address1 = request.Address1;
+        employee.Address2 = request.Address2;
+        employee.City = request.City;
+        employee.State = request.State;
+        employee.ZipCode = request.ZipCode;
+        employee.PhoneNumber = request.PhoneNumber;
+        employee.Email = request.Email;
 
         try
         {
-            _context.Entry(existingEmployee).State = EntityState.Modified;
-
+            _context.Entry(employee).State = EntityState.Modified;
             await _context.SaveChangesAsync();
+
             _logger.LogInformation("Employee with ID: {EmployeeId} successfully updated", id);
-            return Ok(existingEmployee);
+            return Ok(EmployeeToGetEmployeeResponse(employee));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error occurred while updating employee with ID: {EmployeeId}", id);
-            return StatusCode(500, "An error occurred while updating the employee");
+            return StatusCode(500, "An error occurred while updating the employee.");
         }
     }
+    #endregion
 
+    #region DELETE: Delete Employee
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeleteEmployee(int id)
+    {
+        var employee = await _context.Employees.FindAsync(id);
+
+        if (employee == null)
+            return NotFound();
+
+        _context.Employees.Remove(employee);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+    #endregion
+
+    #region GET: Employee Benefits
     /// <summary>
     /// Gets the benefits for an employee.
     /// </summary>
-    /// <param name="employeeId">The ID to get the benefits for.</param>
-    /// <returns>The benefits for that employee.</returns>
     [HttpGet("{employeeId}/benefits")]
     [ProducesResponseType(typeof(IEnumerable<GetEmployeeResponseEmployeeBenefit>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -163,9 +174,7 @@ public class EmployeesController : BaseController
             .SingleOrDefaultAsync(e => e.Id == employeeId);
 
         if (employee == null)
-        {
             return NotFound();
-        }
 
         var benefits = employee.Benefits.Select(b => new GetEmployeeResponseEmployeeBenefit
         {
@@ -177,39 +186,20 @@ public class EmployeesController : BaseController
 
         return Ok(benefits);
     }
+    #endregion
 
-    [HttpDelete("{id}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> DeleteEmployee(int id)
+    #region Private Helpers
+    private static GetEmployeeResponse EmployeeToGetEmployeeResponse(Employee employee) => new()
     {
-        var employee = await _context.Employees.FindAsync(id);
-
-        if (employee == null)
-        {
-            return NotFound();
-        }
-
-        _context.Employees.Remove(employee);
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
-    private GetEmployeeResponse EmployeeToGetEmployeeResponse(Employee employee)
-    {
-        return new GetEmployeeResponse
-        {
-            FirstName = employee.FirstName,
-            LastName = employee.LastName,
-            Address1 = employee.Address1,
-            Address2 = employee.Address2,
-            City = employee.City,
-            State = employee.State,
-            ZipCode = employee.ZipCode,
-            PhoneNumber = employee.PhoneNumber,
-            Email = employee.Email
-        };
-    }
+        FirstName = employee.FirstName,
+        LastName = employee.LastName,
+        Address1 = employee.Address1,
+        Address2 = employee.Address2,
+        City = employee.City,
+        State = employee.State,
+        ZipCode = employee.ZipCode,
+        PhoneNumber = employee.PhoneNumber,
+        Email = employee.Email
+    };
+    #endregion
 }
