@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
 using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
 using Testcontainers.PostgreSql;
 
 var postgreSqlContainer = new PostgreSqlBuilder().Build();
@@ -17,6 +18,7 @@ var configuration = builder.Configuration;
 {
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "TheEmployeeAPI.xml"));
 });*/
+builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddHttpContextAccessor();
@@ -63,10 +65,13 @@ using (var scope = app.Services.CreateScope()) {
 }
 
 // Configure the HTTP request pipeline.
-/*if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-}*/
+    app.MapScalarApiReference(options => {
+        options.WithTitle("Employee Api");
+    });
+}
 
 app.UseHttpsRedirection();
 app.MapControllers();
