@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using EmployeeAPI.Employees;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace EmployeeAPI.Tests;
@@ -21,7 +22,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     public async Task GetAllEmployees_ReturnsOkResult(){
         var client = _factory.CreateClient();
         await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.GetAsync("/employees");
+        var response = await client.GetAsync("api/employees");
 
         if (!response.IsSuccessStatusCode)
         {
@@ -29,7 +30,8 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
             throw new Exception($"Failed to get employees: {content}");
         }
 
-        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>();
+        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>() ??
+             throw new ArgumentNullException(nameof(IEnumerable<GetEmployeeResponse>));
         Assert.NotEmpty(employees);
     }
 
@@ -38,7 +40,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.GetAsync("/employees?FirstNameContains=John");
+        var response = await client.GetAsync("api/employees?FirstNameContains=John");
 
         if (!response.IsSuccessStatusCode)
         {
@@ -50,7 +52,8 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var allEmployees = db.Employees.ToList();
 
-        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>();
+        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>() ??
+            throw new ArgumentNullException(nameof(IEnumerable<GetEmployeeResponse>));
         Assert.Single(employees);
     }
 
@@ -59,7 +62,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.GetAsync("/employees/1");
+        var response = await client.GetAsync("api/employees/1");
 
         response.EnsureSuccessStatusCode();
     }
@@ -69,7 +72,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.PostAsJsonAsync("/employees", new Employee { FirstName = "Tom", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
+        var response = await client.PostAsJsonAsync("api/employees", new Employee { FirstName = "Tom", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
 
         response.EnsureSuccessStatusCode();
     }
@@ -83,7 +86,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         var invalidEmployee = new CreateEmployeeRequest(); // Empty object to trigger validation errors
 
         // Act
-        var response = await client.PostAsJsonAsync("/employees", invalidEmployee);
+        var response = await client.PostAsJsonAsync("api/employees", invalidEmployee);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -101,7 +104,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.PutAsJsonAsync("/employees/1", new Employee { 
+        var response = await client.PutAsJsonAsync("api/employees/1", new Employee { 
             FirstName = "John", 
             LastName = "Doe", 
             Address1 = "123 Main Smoot" 
@@ -115,7 +118,8 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var employee = await db.Employees.FindAsync(1);
+        var employee = await db.Employees.FindAsync(1) ??
+            throw new ArgumentNullException(nameof(DbSet<Employee>));;
         Assert.Equal("123 Main Smoot", employee.Address1);
         Assert.Equal(CustomWebApplicationFactory.SystemClock.UtcNow.UtcDateTime, employee.LastModifiedOn);
         Assert.Equal("test@test.com", employee.LastModifiedBy);
@@ -126,7 +130,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.PutAsJsonAsync("/employees/0", new Employee { FirstName = "John", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
+        var response = await client.PutAsJsonAsync("api/employees/0", new Employee { FirstName = "John", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -140,7 +144,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         var invalidEmployee = new UpdateEmployeeRequest(); // Empty object to trigger validation errors
 
         // Act
-        var response = await client.PutAsJsonAsync($"/employees/{_employeeId}", invalidEmployee);
+        var response = await client.PutAsJsonAsync($"api/employees/{_employeeId}", invalidEmployee);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -156,12 +160,14 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         // Act
         var client = _factory.CreateClient();
         await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.GetAsync($"/employees/{_employeeId}/benefits");
+        var response = await client.GetAsync($"api/employees/{_employeeId}/benefits");
 
         // Assert
         response.EnsureSuccessStatusCode();
         
-        var benefits = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponseEmployeeBenefit>>();
+        var benefits = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponseEmployeeBenefit>>() ??
+            throw new ArgumentNullException(nameof(IEnumerable<GetEmployeeResponseEmployeeBenefit>));
+        
         Assert.Equal(2, benefits.Count());
     }
     
@@ -179,7 +185,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
             await db.SaveChangesAsync();
         }
 
-        var response = await client.DeleteAsync($"/employees/{newEmployee.Id}");
+        var response = await client.DeleteAsync($"api/employees/{newEmployee.Id}");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
@@ -189,14 +195,14 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.DeleteAsync("/employees/99999");
+        var response = await client.DeleteAsync("api/employees/99999");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     protected async Task AddAuthorizationToClientForRoleAsync(HttpClient client, string role)
     {
-        var resp = await client.PostAsJsonAsync("/api/auth/generateAVeryInsecureToken_pleasedontusethisever", new
+        var resp = await client.PostAsJsonAsync("api/auth/generateAVeryInsecureToken_pleasedontusethisever", new
         {
             role, username = "test@test.com"
         });
