@@ -1,6 +1,7 @@
+using EmployeeAPI.Data;
 using FluentValidation;
 
-namespace EmployeeAPI.Employees;
+namespace EmployeeAPI.Features.Employees;
 
 public class UpdateEmployeeRequest
 {

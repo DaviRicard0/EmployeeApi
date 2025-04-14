@@ -1,8 +1,12 @@
+
+using EmployeeAPI.Data;
+using EmployeeAPI.Entities;
+using EmployeeAPI.Features.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace EmployeeAPI.Employees;
+namespace EmployeeAPI.Features.Employees;
 
 [Authorize]
 public class EmployeesController : BaseController

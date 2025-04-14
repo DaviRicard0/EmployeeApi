@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 
-namespace EmployeeAPI.Auth;
+namespace EmployeeAPI.Features.Auth;
 
 public static class HttpContextExtensions
 {

@@ -1,6 +1,7 @@
+using EmployeeAPI.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace EmployeeAPI;
+namespace EmployeeAPI.Data;
 
 public class SeedData
 {

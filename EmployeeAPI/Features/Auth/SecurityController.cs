@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace EmployeeAPI.Auth;
+namespace EmployeeAPI.Features.Auth;
 
 [Route("api/[controller]")]
 [ApiController]

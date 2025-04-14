@@ -1,4 +1,4 @@
-namespace EmployeeAPI.Employees;
+namespace EmployeeAPI.Features.Employees;
 
 public class GetEmployeeResponse
 {

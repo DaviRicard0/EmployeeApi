@@ -1,5 +1,6 @@
 using System.Text;
 using EmployeeAPI;
+using EmployeeAPI.Data;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;

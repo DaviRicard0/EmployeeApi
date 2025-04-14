@@ -1,7 +1,8 @@
+using EmployeeAPI.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
 
-namespace EmployeeAPI;
+namespace EmployeeAPI.Data;
 
 public class AppDbContext : DbContext
 {

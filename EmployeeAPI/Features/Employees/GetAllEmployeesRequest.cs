@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace EmployeeAPI.Employees;
+namespace EmployeeAPI.Features.Employees;
 
 public class GetAllEmployeesRequest {
     public int? Page { get; set; }
