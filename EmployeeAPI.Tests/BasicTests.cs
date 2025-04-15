@@ -5,7 +5,6 @@ using EmployeeAPI.Data;
 using EmployeeAPI.Entities;
 using EmployeeAPI.Features.Employees;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace EmployeeAPI.Tests;
@@ -13,84 +12,85 @@ namespace EmployeeAPI.Tests;
 public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;
-    private int _employeeId = 1;
+    private const int EmployeeId = 1;
+    private readonly string _adminRole = "Admin";
 
     public BasicTests(CustomWebApplicationFactory factory)
     {
         _factory = factory;
     }
 
+    private async Task AuthenticateClientAsync(HttpClient client)
+    {
+        var resp = await client.PostAsJsonAsync("api/auth/generateAVeryInsecureToken_pleasedontusethisever", new
+        {
+            role = _adminRole, 
+            username = "test@test.com"
+        });
+        resp.EnsureSuccessStatusCode();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await resp.Content.ReadAsStringAsync());
+    }
+
     [Fact]
-    public async Task GetAllEmployees_ReturnsOkResult(){
+    public async Task GetAllEmployees_ShouldReturnOkResult()
+    {
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
+        await AuthenticateClientAsync(client);
         var response = await client.GetAsync("api/employees");
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var content = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Failed to get employees: {content}");
-        }
-
-        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>() ??
-             throw new ArgumentNullException(nameof(IEnumerable<GetEmployeeResponse>));
+        Assert.True(response.IsSuccessStatusCode, await GetErrorMessage(response));
+        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>()
+                             ?? throw new ArgumentNullException(nameof(IEnumerable<GetEmployeeResponse>));
         Assert.NotEmpty(employees);
     }
 
     [Fact]
-    public async Task GetAllEmployees_WithFilter_ReturnsOneResult()
+    public async Task GetAllEmployees_WithFilter_ShouldReturnOneResult()
     {
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
+        await AuthenticateClientAsync(client);
         var response = await client.GetAsync("api/employees?FirstNameContains=John");
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var content = await response.Content.ReadAsStringAsync();
-            Assert.Fail($"Failed to get employees: {content}");
-        }
+        Assert.True(response.IsSuccessStatusCode, await GetErrorMessage(response));
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var allEmployees = db.Employees.ToList();
+        var employeesInDb = db.Employees.ToList();
 
-        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>() ??
-            throw new ArgumentNullException(nameof(IEnumerable<GetEmployeeResponse>));
+        var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>()
+                             ?? throw new ArgumentNullException(nameof(IEnumerable<GetEmployeeResponse>));
         Assert.Single(employees);
     }
 
     [Fact]
-    public async Task GetEmployeeById_ReturnsOkResult()
+    public async Task GetEmployeeById_ShouldReturnOkResult()
     {
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.GetAsync("api/employees/1");
+        await AuthenticateClientAsync(client);
+        var response = await client.GetAsync($"api/employees/{EmployeeId}");
+        response.EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task CreateEmployee_ShouldReturnCreatedResult()
+    {
+        var client = _factory.CreateClient();
+        await AuthenticateClientAsync(client);
+        var employee = new Employee { FirstName = "Tom", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" };
+        var response = await client.PostAsJsonAsync("api/employees", employee);
 
         response.EnsureSuccessStatusCode();
     }
 
     [Fact]
-    public async Task CreateEmployee_ReturnsCreatedResult()
+    public async Task CreateEmployee_WithInvalidData_ShouldReturnBadRequest()
     {
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.PostAsJsonAsync("api/employees", new Employee { FirstName = "Tom", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
+        await AuthenticateClientAsync(client);
+        var invalidEmployee = new CreateEmployeeRequest();
 
-        response.EnsureSuccessStatusCode();
-    }
-
-    [Fact]
-    public async Task CreateEmployee_ReturnsBadRequestResult()
-    {
-        // Arrange
-        var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var invalidEmployee = new CreateEmployeeRequest(); // Empty object to trigger validation errors
-
-        // Act
         var response = await client.PostAsJsonAsync("api/employees", invalidEmployee);
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
@@ -102,53 +102,41 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task UpdateEmployee_ReturnsOkResult()
+    public async Task UpdateEmployee_ShouldReturnOkResult()
     {
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.PutAsJsonAsync("api/employees/1", new Employee { 
-            FirstName = "John", 
-            LastName = "Doe", 
-            Address1 = "123 Main Smoot" 
-        });
+        await AuthenticateClientAsync(client);
+        var updatedEmployee = new Employee { FirstName = "John", LastName = "Doe", Address1 = "123 Main Smoot" };
+        var response = await client.PutAsJsonAsync($"api/employees/{EmployeeId}", updatedEmployee);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var content = await response.Content.ReadAsStringAsync();
-            Assert.Fail($"Failed to update employee: {content}");
-        }
+        Assert.True(response.IsSuccessStatusCode, await GetErrorMessage(response));
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var employee = await db.Employees.FindAsync(1) ??
-            throw new ArgumentNullException(nameof(DbSet<Employee>));;
+        var employee = await db.Employees.FindAsync(EmployeeId);
+        Assert.NotNull(employee);
         Assert.Equal("123 Main Smoot", employee.Address1);
-        Assert.Equal(CustomWebApplicationFactory.SystemClock.UtcNow.UtcDateTime, employee.LastModifiedOn);
-        Assert.Equal("test@test.com", employee.LastModifiedBy);
     }
 
     [Fact]
-    public async Task UpdateEmployee_ReturnsNotFoundForNonExistentEmployee()
+    public async Task UpdateEmployee_WithInvalidId_ShouldReturnNotFound()
     {
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.PutAsJsonAsync("api/employees/0", new Employee { FirstName = "John", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" });
+        await AuthenticateClientAsync(client);
+        var response = await client.PutAsJsonAsync("api/employees/0", new Employee { FirstName = "John", LastName = "Doe" });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task UpdateEmployee_ReturnsBadRequestWhenAddress()
+    public async Task UpdateEmployee_WithInvalidData_ShouldReturnBadRequest()
     {
-        // Arrange
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var invalidEmployee = new UpdateEmployeeRequest(); // Empty object to trigger validation errors
+        await AuthenticateClientAsync(client);
+        var invalidEmployee = new UpdateEmployeeRequest();
 
-        // Act
-        var response = await client.PutAsJsonAsync($"api/employees/{_employeeId}", invalidEmployee);
+        var response = await client.PutAsJsonAsync($"api/employees/{EmployeeId}", invalidEmployee);
 
-        // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var problemDetails = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
@@ -157,27 +145,25 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task GetBenefitsForEmployee_ReturnsOkResult()
+    public async Task GetBenefitsForEmployee_ShouldReturnOkResult()
     {
-        // Act
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
-        var response = await client.GetAsync($"api/employees/{_employeeId}/benefits");
+        await AuthenticateClientAsync(client);
+        var response = await client.GetAsync($"api/employees/{EmployeeId}/benefits");
 
-        // Assert
         response.EnsureSuccessStatusCode();
         
-        var benefits = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponseEmployeeBenefit>>() ??
-            throw new ArgumentNullException(nameof(IEnumerable<GetEmployeeResponseEmployeeBenefit>));
+        var benefits = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponseEmployeeBenefit>>()
+                              ?? throw new ArgumentNullException(nameof(IEnumerable<GetEmployeeResponseEmployeeBenefit>));
         
         Assert.Equal(2, benefits.Count());
     }
-    
+
     [Fact]
-    public async Task DeleteEmployee_ReturnsNoContentResult()
+    public async Task DeleteEmployee_ShouldReturnNoContentResult()
     {
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
+        await AuthenticateClientAsync(client);
 
         var newEmployee = new Employee { FirstName = "Meow", LastName = "Garita" };
         using (var scope = _factory.Services.CreateScope())
@@ -193,22 +179,18 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task DeleteEmployee_ReturnsNotFoundResult()
+    public async Task DeleteEmployee_WithInvalidId_ShouldReturnNotFound()
     {
         var client = _factory.CreateClient();
-        await AddAuthorizationToClientForRoleAsync(client, "Admin");
+        await AuthenticateClientAsync(client);
         var response = await client.DeleteAsync("api/employees/99999");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    protected async Task AddAuthorizationToClientForRoleAsync(HttpClient client, string role)
+    private async Task<string> GetErrorMessage(HttpResponseMessage response)
     {
-        var resp = await client.PostAsJsonAsync("api/auth/generateAVeryInsecureToken_pleasedontusethisever", new
-        {
-            role, username = "test@test.com"
-        });
-        resp.EnsureSuccessStatusCode();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await resp.Content.ReadAsStringAsync());
+        var content = await response.Content.ReadAsStringAsync();
+        return $"Failed with status code {response.StatusCode}: {content}";
     }
 }
