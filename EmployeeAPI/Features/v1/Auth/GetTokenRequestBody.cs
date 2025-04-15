@@ -1,4 +1,4 @@
-namespace EmployeeAPI.Features.Auth;
+namespace EmployeeAPI.Features.v1.Auth;
 
 public class GetTokenRequestBody
 {

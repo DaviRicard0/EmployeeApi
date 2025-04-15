@@ -1,9 +1,11 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 
-namespace EmployeeAPI.Features.Auth;
+namespace EmployeeAPI.Features.v1.Auth;
 
-[Route("api/[controller]")]
 [ApiController]
+[Route("api/v{version:apiVersion}/[controller]")]
+[ApiVersion(1)]
 public class AuthController : ControllerBase
 {
     [HttpPost("generateAVeryInsecureToken_pleasedontusethisever")]

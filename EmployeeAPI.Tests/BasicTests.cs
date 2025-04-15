@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using EmployeeAPI.Data;
 using EmployeeAPI.Entities;
-using EmployeeAPI.Features.Employees;
+using EmployeeAPI.Features.v1.Employees;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,7 +22,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 
     private async Task AuthenticateClientAsync(HttpClient client)
     {
-        var resp = await client.PostAsJsonAsync("api/auth/generateAVeryInsecureToken_pleasedontusethisever", new
+        var resp = await client.PostAsJsonAsync("api/v1/auth/generateAVeryInsecureToken_pleasedontusethisever", new
         {
             role = _adminRole, 
             username = "test@test.com"
@@ -36,7 +36,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AuthenticateClientAsync(client);
-        var response = await client.GetAsync("api/employees");
+        var response = await client.GetAsync("api/v1/employees");
 
         Assert.True(response.IsSuccessStatusCode, await GetErrorMessage(response));
         var employees = await response.Content.ReadFromJsonAsync<IEnumerable<GetEmployeeResponse>>()
@@ -49,7 +49,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AuthenticateClientAsync(client);
-        var response = await client.GetAsync("api/employees?FirstNameContains=John");
+        var response = await client.GetAsync("api/v1/employees?FirstNameContains=John");
 
         Assert.True(response.IsSuccessStatusCode, await GetErrorMessage(response));
 
@@ -67,7 +67,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AuthenticateClientAsync(client);
-        var response = await client.GetAsync($"api/employees/{EmployeeId}");
+        var response = await client.GetAsync($"api/v1/employees/{EmployeeId}");
         response.EnsureSuccessStatusCode();
     }
 
@@ -77,7 +77,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         var client = _factory.CreateClient();
         await AuthenticateClientAsync(client);
         var employee = new Employee { FirstName = "Tom", LastName = "Doe", SocialSecurityNumber = "1111-11-1111" };
-        var response = await client.PostAsJsonAsync("api/employees", employee);
+        var response = await client.PostAsJsonAsync("api/v1/employees", employee);
 
         response.EnsureSuccessStatusCode();
     }
@@ -89,7 +89,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         await AuthenticateClientAsync(client);
         var invalidEmployee = new CreateEmployeeRequest();
 
-        var response = await client.PostAsJsonAsync("api/employees", invalidEmployee);
+        var response = await client.PostAsJsonAsync("api/v1/employees", invalidEmployee);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -107,7 +107,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         var client = _factory.CreateClient();
         await AuthenticateClientAsync(client);
         var updatedEmployee = new Employee { FirstName = "John", LastName = "Doe", Address1 = "123 Main Smoot" };
-        var response = await client.PutAsJsonAsync($"api/employees/{EmployeeId}", updatedEmployee);
+        var response = await client.PutAsJsonAsync($"api/v1/employees/{EmployeeId}", updatedEmployee);
 
         Assert.True(response.IsSuccessStatusCode, await GetErrorMessage(response));
 
@@ -123,7 +123,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AuthenticateClientAsync(client);
-        var response = await client.PutAsJsonAsync("api/employees/0", new Employee { FirstName = "John", LastName = "Doe" });
+        var response = await client.PutAsJsonAsync("api/v1/employees/0", new Employee { FirstName = "John", LastName = "Doe" });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -135,7 +135,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
         await AuthenticateClientAsync(client);
         var invalidEmployee = new UpdateEmployeeRequest();
 
-        var response = await client.PutAsJsonAsync($"api/employees/{EmployeeId}", invalidEmployee);
+        var response = await client.PutAsJsonAsync($"api/v1/employees/{EmployeeId}", invalidEmployee);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -149,7 +149,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AuthenticateClientAsync(client);
-        var response = await client.GetAsync($"api/employees/{EmployeeId}/benefits");
+        var response = await client.GetAsync($"api/v1/employees/{EmployeeId}/benefits");
 
         response.EnsureSuccessStatusCode();
         
@@ -173,7 +173,7 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
             await db.SaveChangesAsync();
         }
 
-        var response = await client.DeleteAsync($"api/employees/{newEmployee.Id}");
+        var response = await client.DeleteAsync($"api/v1/employees/{newEmployee.Id}");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
@@ -183,12 +183,12 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
     {
         var client = _factory.CreateClient();
         await AuthenticateClientAsync(client);
-        var response = await client.DeleteAsync("api/employees/99999");
+        var response = await client.DeleteAsync("api/v1/employees/99999");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private async Task<string> GetErrorMessage(HttpResponseMessage response)
+    private static async Task<string> GetErrorMessage(HttpResponseMessage response)
     {
         var content = await response.Content.ReadAsStringAsync();
         return $"Failed with status code {response.StatusCode}: {content}";

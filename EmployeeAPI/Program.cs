@@ -1,4 +1,5 @@
 using System.Text;
+using Asp.Versioning;
 using EmployeeAPI;
 using EmployeeAPI.Data;
 using FluentValidation;
@@ -51,9 +52,14 @@ builder.Services
             options.TokenValidationParameters = tokenValidationParameters;
         });
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-// builder.Services.AddOpenApi();
+builder.Services.AddApiVersioning(options => {
+    options.DefaultApiVersion = new ApiVersion(1);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+}).AddApiExplorer(options => {
+    options.GroupNameFormat = "'v'V";
+    options.SubstituteApiVersionInUrl = true;
+});
 
 var app = builder.Build();
 
