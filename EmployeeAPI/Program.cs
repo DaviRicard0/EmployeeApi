@@ -1,6 +1,5 @@
 using System.Text;
 using Asp.Versioning;
-using EmployeeAPI;
 using EmployeeAPI.Data;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
