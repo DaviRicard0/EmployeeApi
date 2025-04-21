@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
         _httpContextAccessor = httpContextAccessor;
     }
 
+    public DbSet<User> Users {get;set;}
     public DbSet<Employee> Employees { get; set; }
     public DbSet<Benefit> Benefits { get; set; }
     public DbSet<EmployeeBenefit> EmployeeBenefits { get; set; }
