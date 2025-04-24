@@ -24,13 +24,13 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
-    [HttpPost("generateAVeryInsecureToken_pleasedontusethisever")]
-    public IActionResult GetToken([FromBody] GetTokenRequestBody request)
-    {
-        return Ok(HttpContext.GenerateJwt(request.Role, request.Username));
-    }
-
-    [HttpPost]
+    /// <summary>
+    /// Creates a new user.
+    /// </summary>
+    [HttpPost("register")]
+    [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Register(RegisterRequest request)
     {
         var user = new User { 
@@ -42,20 +42,30 @@ public class AuthController : ControllerBase
         await _context.Users.AddAsync(user);
         await _context.SaveChangesAsync();
 
-        return Ok("User successfully registered.");
+        return Ok(new LoginResponse(){
+            Id = user.Id,
+            Username = user.Username
+        });
     }
 
-    [HttpPost]
+    /// <summary>
+    /// Gets the token jwt.
+    /// </summary>
+    [HttpPost("login")]
+    [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Login(LoginRequest request)
     {
-        var user = await _context.Users.SingleOrDefaultAsync(u => u.Username.Equals(request.Username, StringComparison.CurrentCultureIgnoreCase));
-        if (user is null) return Unauthorized("User not found.");
+        var user = await _context.Users.SingleOrDefaultAsync(u => u.Username.ToLower() == request.Username!.ToLower());
+        
+        if (user is null) return NotFound("User not found.");
 
         var result = _hasher.VerifyHashedPassword(user,user.Password,request.Password!);
 
-        if (result == PasswordVerificationResult.Failed)
-        return Unauthorized("Incorrect password.");
+        if (result == PasswordVerificationResult.Failed) return Unauthorized("Incorrect password.");
         
-        return Ok(/*new { token }*/);
+        return Ok(HttpContext.GenerateJwt("Admin", user.Username));
     }
 }

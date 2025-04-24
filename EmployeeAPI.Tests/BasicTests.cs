@@ -13,7 +13,6 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 {
     private readonly CustomWebApplicationFactory _factory;
     private const int EmployeeId = 1;
-    private readonly string _adminRole = "Admin";
 
     public BasicTests(CustomWebApplicationFactory factory)
     {
@@ -22,10 +21,10 @@ public class BasicTests : IClassFixture<CustomWebApplicationFactory>
 
     private async Task AuthenticateClientAsync(HttpClient client)
     {
-        var resp = await client.PostAsJsonAsync("api/v1/auth/generateAVeryInsecureToken_pleasedontusethisever", new
+        var resp = await client.PostAsJsonAsync("api/v1/auth/login", new 
         {
-            role = _adminRole, 
-            username = "test@test.com"
+            username = "test@test.com",
+            password = "test@test.com"
         });
         resp.EnsureSuccessStatusCode();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", await resp.Content.ReadAsStringAsync());

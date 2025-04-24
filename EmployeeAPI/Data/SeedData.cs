@@ -1,4 +1,5 @@
 using EmployeeAPI.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace EmployeeAPI.Data;
@@ -77,6 +78,21 @@ public class SeedData
                 new EmployeeBenefit { EmployeeId = jane.Id, BenefitId = visionBenefit.Id }
             });
 
+            context.SaveChanges();
+        }
+
+        if (!context.Users.Any())
+        {
+            var user = new User(){
+                Username = "test@test.com",
+                Password = "test@test.com"
+            };
+
+            var hasher = new PasswordHasher<User>();
+
+            user.Password = hasher.HashPassword(user, user.Password);
+
+            context.Users.Add(user);
             context.SaveChanges();
         }
     }

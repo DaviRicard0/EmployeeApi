@@ -1,7 +1,7 @@
 namespace EmployeeAPI.Features.v1.Auth;
 
-public class GetTokenRequestBody
+public class LoginResponse
 {
-    public required string Role { get; set; }
+    public int Id {get;set;}
     public required string Username { get; set; }
 }
