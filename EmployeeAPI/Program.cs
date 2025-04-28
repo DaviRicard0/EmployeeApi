@@ -1,6 +1,7 @@
 using System.Text;
 using Asp.Versioning;
 using EmployeeAPI.Data;
+using EmployeeAPI.Helpers;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,8 @@ builder.Services.AddDbContext<AppDbContext>(options => {
     options.UseNpgsql(conn);
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 });
+
+builder.Services.AddLimiterRules();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
