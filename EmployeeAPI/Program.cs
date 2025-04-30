@@ -3,7 +3,9 @@ using Asp.Versioning;
 using EmployeeAPI.Data;
 using EmployeeAPI.Helpers;
 using FluentValidation;
+using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
 using Microsoft.IdentityModel.Tokens;
@@ -35,6 +37,10 @@ builder.Services.AddDbContext<AppDbContext>(options => {
     options.UseNpgsql(conn);
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 });
+
+builder.Services.AddHealthChecks().AddNpgSql(postgreSqlContainer.GetConnectionString(), name:"PostgreSQL", tags: ["db","data","sql"]);
+
+builder.Services.AddHealthChecksUI().AddPostgreSqlStorage(postgreSqlContainer.GetConnectionString());
 
 builder.Services.AddLimiterRules();
 
@@ -84,6 +90,16 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.MapControllers();
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+app.MapHealthChecksUI(options =>
+{
+    options.UIPath = "/health-ui";
+});
 
 app.Run();
 
