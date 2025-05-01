@@ -1,8 +1,12 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Asp.Versioning;
 using EmployeeAPI.Data;
 using EmployeeAPI.Entities;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -65,6 +69,34 @@ public class AuthController : ControllerBase
         var result = _hasher.VerifyHashedPassword(user,user.Password,request.Password!);
 
         if (result == PasswordVerificationResult.Failed) return Unauthorized("Incorrect password.");
+        
+        return Ok(HttpContext.GenerateJwt("Admin", user.Username));
+    }
+
+    [HttpGet("google-login")]
+    public IActionResult GoogleLogin()
+    {
+        var properties = new AuthenticationProperties { RedirectUri = Url.Action("GoogleCallback") };
+        return Challenge(properties, GoogleDefaults.AuthenticationScheme);
+    }
+
+    [HttpGet("google-callback")]
+    public async Task<IActionResult> GoogleCallback()
+    {
+        var authenticateResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        if (!authenticateResult.Succeeded || authenticateResult?.Principal == null)
+            return BadRequest("Google authentication failed");
+
+        var email = authenticateResult.Principal.FindFirst(ClaimTypes.Email)?.Value;
+        var name = authenticateResult.Principal.FindFirst(ClaimTypes.Name)?.Value;
+
+        if (string.IsNullOrEmpty(email))
+            return BadRequest("Unable to retrieve email from Google.");
+
+        var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == email);
+
+        if (user is null) return NotFound("User not found.");
         
         return Ok(HttpContext.GenerateJwt("Admin", user.Username));
     }

@@ -6,6 +6,7 @@ using FluentValidation;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Internal;
 using Microsoft.IdentityModel.Tokens;
@@ -48,7 +49,11 @@ builder.Services.AddHealthChecksUI(options => {
 builder.Services.AddLimiterRules();
 
 builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(
         options =>
         {
@@ -61,7 +66,13 @@ builder.Services
             };
 
             options.TokenValidationParameters = tokenValidationParameters;
-        });
+        })
+    .AddGoogle(options =>
+    {
+        options.ClientId = configuration["Authentication:Google:ClientId"]!;
+        options.ClientSecret = configuration["Authentication:Google:ClientSecret"]!;
+        options.SignInScheme = IdentityConstants.ExternalScheme;
+    });
 
 builder.Services.AddApiVersioning(options => {
     options.DefaultApiVersion = new ApiVersion(1);
