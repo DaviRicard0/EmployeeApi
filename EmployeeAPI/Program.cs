@@ -38,9 +38,12 @@ builder.Services.AddDbContext<AppDbContext>(options => {
     options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 });
 
-builder.Services.AddHealthChecks().AddNpgSql(postgreSqlContainer.GetConnectionString(), name:"PostgreSQL", tags: ["db","data","sql"]);
+builder.Services.AddHealthChecks()
+    .AddNpgSql(postgreSqlContainer.GetConnectionString(),name:"postgresql",tags: ["db","data","sql"]);
 
-builder.Services.AddHealthChecksUI().AddPostgreSqlStorage(postgreSqlContainer.GetConnectionString());
+builder.Services.AddHealthChecksUI(options => {
+    options.AddHealthCheckEndpoint("Infrastructure", "/health");
+}).AddInMemoryStorage();
 
 builder.Services.AddLimiterRules();
 
@@ -80,7 +83,7 @@ using (var scope = app.Services.CreateScope()) {
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment())    
 {
     app.MapOpenApi();
     app.MapScalarApiReference(options => {
@@ -91,15 +94,12 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.MapControllers();
 
-app.MapHealthChecks("/health", new HealthCheckOptions
-{
-    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-});
-
-app.MapHealthChecksUI(options =>
-{
-    options.UIPath = "/health-ui";
-});
+app.MapHealthChecks("/health",
+    new(){
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    }
+);
+app.UseHealthChecksUI(config => config.UIPath = "/health-ui");
 
 app.Run();
 
